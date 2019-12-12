@@ -1,19 +1,27 @@
 package com.stackroute.datamunger.reader;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 
 import com.stackroute.datamunger.query.DataTypeDefinitions;
 import com.stackroute.datamunger.query.Header;
 
 public class CsvQueryProcessor extends QueryProcessingEngine {
+	File fileName;
 
 	/*
 	 * Parameterized constructor to initialize filename. As you are trying to
 	 * perform file reading, hence you need to be ready to handle the IO Exceptions.
 	 */
-	
+
 	public CsvQueryProcessor(String fileName) throws FileNotFoundException {
+		super();
+		this.fileName = new File(fileName);
+		FileInputStream f=new FileInputStream(fileName);
 
 	}
 
@@ -24,8 +32,16 @@ public class CsvQueryProcessor extends QueryProcessingEngine {
 
 	@Override
 	public Header getHeader() throws IOException {
-		
-		return null;
+
+		BufferedReader bfr = new BufferedReader(new FileReader(fileName));
+		String text = bfr.readLine();
+		String[] ar = text.split(",");
+		if (ar.length != -1) {
+			Header hd = new Header(ar);
+			return hd;
+		} else {
+			return null;
+		}
 	}
 
 	/**
@@ -49,29 +65,70 @@ public class CsvQueryProcessor extends QueryProcessingEngine {
 	 * 'mm/dd/yyyy','dd-mon-yy','dd-mon-yyyy','dd-month-yy','dd-month-yyyy','yyyy-mm
 	 * -dd')
 	 */
-	
+
 	@Override
 	public DataTypeDefinitions getColumnType() throws IOException {
-		
-		// checking for Integer
+		try {
+			int i = 0;
+			BufferedReader bf = new BufferedReader(new FileReader(fileName));
 
-		// checking for floating point numbers
+			String text = bf.readLine();
+			int len = text.split(",").length;
+			text = bf.readLine();
+			String[] ar = text.split(",");
+			String[] arr = new String[len];
+			for (String s : ar) {
+				try {
+					int x = Integer.parseInt(s);
+					arr[i] = "java.lang.Integer";
+				} catch (Exception e1) {
+					try {
+						double x = Double.parseDouble(s);
+						arr[i] = "java.lang.Double";
+					} catch (Exception e3) {
+						try {
 
-		// checking for date format dd/mm/yyyy
+						if (s.matches("^[0-9]{2}/[0-9]{2}/[0-9]{4}$") || s.matches("^[0-9]{2}-[a-z]{3}-[0-9]{2}$")
+								|| s.matches("^[0-9]{2}-[a-z]{3}-[0-9]{4}$")
+								|| s.matches("^[0-9]{2}-[a-z]{3,9}-[0-9]{2}$")
+								|| s.matches("^[0-9]{2}-[a-z]{3,9}-[0-9]{4}$")
+								|| s.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")) {
 
-		// checking for date format mm/dd/yyyy
+							arr[i] = "java.util.Date";
+						}
+						else {
 
-		// checking for date format dd-mon-yy
+						arr[i] = "java.lang.String";
+						}
+						}
+						catch(Exception e) {
+							arr[i]="java.lang.String";
+						}
 
-		// checking for date format dd-mon-yyyy
+					}
+				}
 
-		// checking for date format dd-month-yy
+				finally {
+					i++;
+				}
+			}
+			for (i = 0; i < arr.length; i++) {
+				if (arr[i] == null)
+					arr[i] = "java.lang.Object";
+			}
 
-		// checking for date format dd-month-yyyy
+			DataTypeDefinitions df = new DataTypeDefinitions(arr);
+			bf.close();
 
-		// checking for date format yyyy-mm-dd
+			return df;
 
-		return null;
+		}
+
+		catch (Exception e) {
+			DataTypeDefinitions df = new DataTypeDefinitions(new String[0]);
+			return df;
+
+		}
+
 	}
-
 }
